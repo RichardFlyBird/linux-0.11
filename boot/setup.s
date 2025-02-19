@@ -61,6 +61,7 @@ start:
 	mov	[10],bx
 	mov	[12],cx
 
+| 复制 磁盘16个byte的数据到 0x90080 ~ 0x9008F
 ! Get hd0 data
 
 	mov	ax,#0x0000
@@ -73,6 +74,7 @@ start:
 	rep
 	movsb
 
+| 复制 磁盘16个byte的数据到 0x90090 ~ 0x9009F
 ! Get hd1 data
 
 	mov	ax,#0x0000
