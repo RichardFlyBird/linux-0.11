@@ -55,6 +55,8 @@ boot/head.o: boot/head.s
 	gcc -I./include -traditional -c boot/head.s
 	mv head.o boot/
 
+// head.o 和 main.o 和其他.o核心模块连接到一起形成可执行文件。
+// 经过一次挪动放在了 0 ~ 0x80000这个区间内(一共512k)，因为是在 setup.s 中写死的挪到[0, 0x80000]，所以这就要求当时编写内核代码的长度必须 小于512k。
 tools/system:	boot/head.o init/main.o \
 		$(ARCHIVES) $(DRIVERS) $(MATH) $(LIBS)
 	$(LD) $(LDFLAGS) boot/head.o init/main.o \
