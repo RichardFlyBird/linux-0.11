@@ -202,7 +202,7 @@ end_move:
 
 	mov	ax,#0x0001	! protected mode (PE) bit
 	lmsw	ax		! This is it! 	// 下面的指令都是在intel CPU保护模式下 执行的
-	jmpi	0,8		! jmp offset 0 of segment 8 (cs) // 等价于 cs=8 (0000, 0000, 0000, 1000的前13位作为段选择子index即=1, 取出gdt[1]位置的8字节的段描述符), ip=0, 然后jmpi远跳转
+	jmpi	0,8		! jmp offset 0 of segment 8 (cs) // 等价于 cs=8 (0000, 0000, 0000, 1000的前13位作为段选择子index即=1, 取出gdt[1]位置的8字节的段描述符), ip=0, 然后jmpi远跳转。----- 至此setup.s代码执行完毕，跳转到物理地址 0的位置执行代码，此时0位置的代码是head.o的首地址
 
 ! This routine checks that the keyboard command queue is empty
 ! No timeout is used - if this hangs there is something wrong with

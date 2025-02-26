@@ -16,12 +16,12 @@
 pg_dir:
 .globl startup_32
 startup_32:
-	movl $0x10,%eax
+	movl $0x10,%eax // 往下连续五个 mov 操作，分别给 ds、es、fs、gs 这几个段寄存器赋值为 0x10，根据段描述符结构解析，表示这几个段寄存器的值为指向全局描述符表中的第二个段描述符，也就是数据段描述符
 	mov %ax,%ds
 	mov %ax,%es
 	mov %ax,%fs
 	mov %ax,%gs
-	lss stack_start,%esp
+	lss stack_start,%esp // lss 指令相当于让 ss:esp 这个栈顶指针，指向了 stack_start 这个标号的位置（虽然target 地址写的是%esp，但其实是 ss:esp, stack_start的高16位存到ss段寄存器，stack_start的低32位存到esp栈顶寄存器, 栈的使用是从一块内存的 高地址 -> 低地址扩张。）。还记得图里的那个原来的栈顶指针在哪里吧？往上翻一下，0x9FF00，现在要变咯。而stack_start 是在sched.c中声明的。
 	call setup_idt
 	call setup_gdt
 	movl $0x10,%eax		# reload all the segment registers
@@ -66,7 +66,9 @@ check_x87:
 1:	.byte 0xDB,0xE4		/* fsetpm for 287, ignored by 387 */
 	ret
 
-/*
+/* // 安装 256 个中断描述符到 idt 表中，并且每一个中断描述符的地址 指向 ignore_int 函数的地址.
+//  ignore_int 这个是个默认的中断处理程序，之后会逐渐被各个具体的中断程序所覆盖。 比如之后键盘模块会将自己的键盘中断处理程序，覆盖过去.
+//  现在还没发生这种覆盖行为，所以任何中断对应的中断处理程序，都会指向这个默认的函数 ignore_int，也就是说现在这个阶段你按键盘还不好使。
  *  setup_idt
  *
  *  sets up a idt with 256 entries pointing to
@@ -105,7 +107,7 @@ rp_sidt:
  *  This routine will beoverwritten by the page tables.
  */
 setup_gdt:
-	lgdt gdt_descr
+	lgdt gdt_descr // 加载标号 gdt_descr 的地址的数据 到gdtr寄存器中
 	ret
 
 /*
@@ -226,15 +228,16 @@ idt_descr:
 	.long idt
 .align 2
 .word 0
+// gdt_descr标号处声明了 2byte + 4byte (假定32位的intel CPU(指CPU的寄存器和总线都是32位)，则long类型是4byte)
 gdt_descr:
-	.word 256*8-1		# so does gdt (not that that's any
-	.long gdt		# magic number, but it works for me :^)
+	.word 256*8-1		# so does gdt (not that that's any //gdt表-> limit: 256*8-1=2047（0x07FF）。表示GDT表数组的字节大小为2047, 
+	.long gdt		# magic number, but it works for me :^) // gdt表-> base: GDT 的基地址，即标号 gdt 的地址
 
 	.align 8
 idt:	.fill 256,8,0		# idt is uninitialized
 
-gdt:	.quad 0x0000000000000000	/* NULL descriptor */
-	.quad 0x00c09a0000000fff	/* 16Mb */
-	.quad 0x00c0920000000fff	/* 16Mb */
+gdt:	.quad 0x0000000000000000	/* NULL descriptor */ // 空
+	.quad 0x00c09a0000000fff	/* 16Mb */ // 代码段 描述符
+	.quad 0x00c0920000000fff	/* 16Mb */ // 数据段 描述符
 	.quad 0x0000000000000000	/* TEMPORARY - don't use */
-	.fill 252,8,0			/* space for LDT's and TSS's etc */
+	.fill 252,8,0			/* space for LDT's and TSS's etc */ // .fill指令表示申请后面 252 * 8的字节且填充为0。则gdt表总共 前面4项 + 后面空的252项 = 256项。每一项是8字节
