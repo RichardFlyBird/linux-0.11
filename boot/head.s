@@ -115,6 +115,8 @@ setup_gdt:
  * using 4 of them to span 16 Mb of physical memory. People with
  * more than 16MB will have to expand this.
  */
+ // 设置pg0标号 = 0x1000
+ // 如下pg0 pg1 pg2 pg3 代表四个二级页表的地址。而0x0000 ~ 0x1000这个区间内放置了一级页表，区间大小为 4kb
 .org 0x1000
 pg0:
 
@@ -198,6 +200,14 @@ ignore_int:
  * some kind of marker at them (search for "16Mb"), but I
  * won't guarantee that's all :-( )
  */
+ // 解释下为什么是1024 * 5:
+ // 当时 Linux-0.11 认为，总共可以使用的内存不会超过 16M，也即最大地址空间为 0xFFFFFF。
+ // 因此，16M 的地址空间可以用 1 个页目录表 + 4 个页表搞定。4（页表数）* 1024（页表项数） * 4KB（一页大小）= 16MB
+ // 所以需要的页表大小: 一级页表(1个): 4 entry
+ //					 二级页表(4个): 一级页表中的每1个 entry -> 平行指向 1个二级页表, 一共4个二级页表，每个二级页表 1024个entry => 一共 4 * 1024 entry
+ // 总共的entry大小: 4 + 1024 * 4 = 1024 * 5个，总byte数=1024 * 5 * 8
+
+ // 这些页目录表和页表放在了整个内存布局中最开头的位置，就是覆盖了开头的 system 代码，不过被覆盖的 system 代码已经执行过了，所以被覆盖了也无所谓
 .align 2
 setup_paging:
 	movl $1024*5,%ecx		/* 5 pages - pg_dir+4 page tables */
@@ -215,7 +225,7 @@ setup_paging:
 	subl $0x1000,%eax
 	jge 1b
 	xorl %eax,%eax		/* pg_dir is at 0x0000 */
-	movl %eax,%cr3		/* cr3 - page directory start */
+	movl %eax,%cr3		/* cr3 - page directory start */ // cr3存储了内存中页表的 首地址, 由于首地址就是 0x0000，所以cr3的值就是 0x0000。
 	movl %cr0,%eax
 	orl $0x80000000,%eax
 	movl %eax,%cr0		/* set paging (PG) bit */
